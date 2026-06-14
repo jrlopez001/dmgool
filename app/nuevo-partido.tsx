@@ -28,6 +28,8 @@ export default function NuevoPartidoScreen() {
 
   const [loading, setLoading] = useState(true);
 
+  const [evento, setEvento] = useState('');
+
   const [categoriaId, setCategoriaId] = useState('');
   const [equipo1, setEquipo1] = useState('');
   const [equipo2, setEquipo2] = useState('');
@@ -306,19 +308,29 @@ export default function NuevoPartidoScreen() {
   // =========================
 
   function validarYMostrarResumen() {
-    if (!categoriaId || !equipo1 || !equipo2) {
+
+    if (
+      !evento ||
+      !categoriaId ||
+      !equipo1 ||
+      !equipo2
+    ) {
+
       Alert.alert(
         'Atención',
         'Selecciona todos los campos.'
       );
+
       return;
     }
 
     if (equipo1 === equipo2) {
+
       Alert.alert(
         'Atención',
         'No puedes seleccionar el mismo equipo.'
       );
+
       return;
     }
 
@@ -340,6 +352,9 @@ export default function NuevoPartidoScreen() {
       const { data, error } = await supabase
         .from('partidos')
         .insert({
+
+          evento: evento,
+
           categoria_id: categoriaId,
           equipo1_id: equipo1,
           equipo2_id: equipo2,
@@ -433,20 +448,65 @@ export default function NuevoPartidoScreen() {
           contentContainerStyle={styles.scrollContent}
         >
 
-          {/* HEADER */}
+          {/* =========================
+              EVENTO
+          ========================= */}
 
-          <View style={styles.titleRow}>
+          <View style={styles.card}>
 
-            <Text style={styles.title}>
-              Nuevo Partido
+            <Text style={styles.label}>
+              Evento
             </Text>
 
-            <Ionicons
-              name="football"
-              size={34}
-              color="#000"
-              style={{ marginLeft: 10 }}
-            />
+            <View style={styles.eventRow}>
+
+              <TouchableOpacity
+                style={[
+                  styles.eventButton,
+                  evento === 'VIERNES' &&
+                    styles.eventButtonActive
+                ]}
+                onPress={() =>
+                  setEvento('VIERNES')
+                }
+              >
+
+                <Text
+                  style={[
+                    styles.eventButtonText,
+                    evento === 'VIERNES' &&
+                      styles.eventButtonTextActive
+                  ]}
+                >
+                  Viernes
+                </Text>
+
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.eventButton,
+                  evento === 'SABADO' &&
+                    styles.eventButtonActive
+                ]}
+                onPress={() =>
+                  setEvento('SABADO')
+                }
+              >
+
+                <Text
+                  style={[
+                    styles.eventButtonText,
+                    evento === 'SABADO' &&
+                      styles.eventButtonTextActive
+                  ]}
+                >
+                  Sábado
+                </Text>
+
+              </TouchableOpacity>
+
+            </View>
 
           </View>
 
@@ -708,7 +768,7 @@ export default function NuevoPartidoScreen() {
 
             <View style={styles.summaryBadge}>
               <Text style={styles.summaryBadgeText}>
-                {categoriaSeleccionada?.nombre}
+                {evento} • {categoriaSeleccionada?.nombre}
               </Text>
             </View>
 
@@ -935,18 +995,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40
   },
 
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 10
-  },
-
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold'
-  },
-
   card: {
     backgroundColor: '#fff',
     borderRadius: 24,
@@ -965,6 +1013,34 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontWeight: 'bold'
+  },
+
+  eventRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 15
+  },
+
+  eventButton: {
+    flex: 1,
+    backgroundColor: '#f3f3f3',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center'
+  },
+
+  eventButtonActive: {
+    backgroundColor: '#000'
+  },
+
+  eventButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000'
+  },
+
+  eventButtonTextActive: {
+    color: '#fff'
   },
 
   rowWrapper: {
@@ -1007,7 +1083,7 @@ const styles = StyleSheet.create({
 
   vsText: {
     fontWeight: 'bold',
-    color: '#000', // Modificado a negro
+    color: '#000',
     fontSize: 14
   },
 
@@ -1025,7 +1101,7 @@ const styles = StyleSheet.create({
   },
 
   createButton: {
-    backgroundColor: '#1d7a34', // Modificado a verde
+    backgroundColor: '#1d7a34',
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
@@ -1086,7 +1162,7 @@ const styles = StyleSheet.create({
 
   summaryVs: {
     marginHorizontal: 15,
-    color: '#000', // Modificado a negro en el modal también
+    color: '#000',
     fontWeight: 'bold'
   },
 

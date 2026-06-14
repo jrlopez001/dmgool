@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import * as Network from 'expo-network'
 import { router } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   ActivityIndicator,
@@ -24,7 +24,7 @@ import ConexionRequeridaModal from '../components/ConexionRequeridaModal'
 import { supabase } from '../lib/supabase'
 
 /* =========================
-   TYPES
+    TYPES
 ========================= */
 
 interface Equipo {
@@ -41,6 +41,7 @@ interface Partido {
   periodo_actual: string
   goles_ep1: number
   goles_ep2: number
+  evento?: string
 
   categorias?: Categoria | null
   equipo1?: Equipo | null
@@ -48,7 +49,7 @@ interface Partido {
 }
 
 /* =========================
-   COLORS
+    COLORS
 ========================= */
 
 const COLORS = {
@@ -65,7 +66,7 @@ const COLORS = {
 }
 
 /* =========================
-   HELPERS
+    HELPERS
 ========================= */
 
 function obtenerEstadoColor(estado: string) {
@@ -87,7 +88,7 @@ function obtenerEstadoColor(estado: string) {
 }
 
 /* =========================
-   COMPONENTE CARD
+    COMPONENTE CARD
 ========================= */
 
 function PartidoCard({ item }: { item: Partido }) {
@@ -168,7 +169,7 @@ function PartidoCard({ item }: { item: Partido }) {
 }
 
 /* =========================
-   SCREEN
+    SCREEN
 ========================= */
 
 export default function HomeScreen() {
@@ -184,11 +185,21 @@ export default function HomeScreen() {
   /* NUEVO */
 
   const [modalVisible, setModalVisible] = useState(false)
-
+  const [origen, setOrigen] = useState<'JUGADORES' | 'GRUPOS' | null>(null)
   const [clave, setClave] = useState('')
 
+  /* FILTRO EVENTO */
+
+  const [eventoSeleccionado, setEventoSeleccionado] =
+    useState('VIERNES')
+
+  /* FILTRO CATEGORÍAS */
+
+  const [categoriaSeleccionada, setCategoriaSeleccionada] =
+    useState('LIBRE')
+
   /* =========================
-     INTERNET
+      INTERNET
   ========================= */
 
   const chequearRed = useCallback(async () => {
@@ -210,7 +221,7 @@ export default function HomeScreen() {
   }, [])
 
   /* =========================
-     OBTENER PARTIDOS
+      OBTENER PARTIDOS
   ========================= */
 
   const obtenerPartidos = useCallback(
@@ -232,6 +243,7 @@ export default function HomeScreen() {
             periodo_actual,
             goles_ep1,
             goles_ep2,
+            evento,
 
             categorias (
               nombre
@@ -245,6 +257,7 @@ export default function HomeScreen() {
               nombre
             )
           `)
+          .eq('evento', eventoSeleccionado)
           .order('created_at', {
             ascending: false
           })
@@ -272,11 +285,27 @@ export default function HomeScreen() {
         setRefreshing(false)
       }
     },
-    []
+    [eventoSeleccionado]
   )
 
   /* =========================
-     REFRESH
+      FILTRAR PARTIDOS
+  ========================= */
+
+  const partidosFiltrados = useMemo(() => {
+
+    return partidos.filter((partido) => {
+
+      const categoria =
+        partido.categorias?.nombre?.toUpperCase() || ''
+
+      return categoria === categoriaSeleccionada
+    })
+
+  }, [partidos, categoriaSeleccionada])
+
+  /* =========================
+      REFRESH
   ========================= */
 
   const onRefresh = useCallback(() => {
@@ -288,7 +317,7 @@ export default function HomeScreen() {
   }, [obtenerPartidos])
 
   /* =========================
-     REALTIME
+      REALTIME
   ========================= */
 
   useEffect(() => {
@@ -319,7 +348,7 @@ export default function HomeScreen() {
   }, [chequearRed, obtenerPartidos])
 
   /* =========================
-     RENDER ITEM
+      RENDER ITEM
   ========================= */
 
   const renderPartido = useCallback(
@@ -330,7 +359,7 @@ export default function HomeScreen() {
   )
 
   /* =========================
-     LOADING
+      LOADING
   ========================= */
 
   if (loading && !refreshing) {
@@ -346,7 +375,7 @@ export default function HomeScreen() {
   }
 
   /* =========================
-     UI
+      UI
   ========================= */
 
   return (
@@ -374,9 +403,42 @@ export default function HomeScreen() {
         ]}
       >
 
-        <Text style={styles.title}>
-          Partidos
-        </Text>
+        <View style={styles.eventosContainer}>
+
+          {['VIERNES', 'SABADO'].map((evento) => {
+
+            const activo =
+              eventoSeleccionado === evento
+
+            return (
+
+              <TouchableOpacity
+                key={evento}
+                style={[
+                  styles.eventoButton,
+                  activo &&
+                    styles.eventoButtonActivo
+                ]}
+                onPress={() =>
+                  setEventoSeleccionado(evento)
+                }
+              >
+
+                <Text
+                  style={[
+                    styles.eventoButtonText,
+                    activo &&
+                      styles.eventoButtonTextActivo
+                  ]}
+                >
+                  {evento}
+                </Text>
+
+              </TouchableOpacity>
+            )
+          })}
+
+        </View>
 
         <TouchableOpacity
           style={styles.newButton}
@@ -393,6 +455,45 @@ export default function HomeScreen() {
 
       </View>
 
+      {/* BOTONES CATEGORÍAS */}
+
+      <View style={styles.categoriasContainer}>
+
+        {['LIBRE', 'MASTER', 'FEMENINO'].map((categoria) => {
+
+          const activo =
+            categoriaSeleccionada === categoria
+
+          return (
+
+            <TouchableOpacity
+              key={categoria}
+              style={[
+                styles.categoriaButton,
+                activo &&
+                  styles.categoriaButtonActiva
+              ]}
+              onPress={() =>
+                setCategoriaSeleccionada(categoria)
+              }
+            >
+
+              <Text
+                style={[
+                  styles.categoriaButtonText,
+                  activo &&
+                    styles.categoriaButtonTextActivo
+                ]}
+              >
+                {categoria}
+              </Text>
+
+            </TouchableOpacity>
+          )
+        })}
+
+      </View>
+
       {error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>
@@ -402,7 +503,7 @@ export default function HomeScreen() {
       ) : null}
 
       <FlatList
-        data={partidos}
+        data={partidosFiltrados}
         keyExtractor={(item) => item.id}
         renderItem={renderPartido}
         showsVerticalScrollIndicator={false}
@@ -429,29 +530,43 @@ export default function HomeScreen() {
         removeClippedSubviews
       />
 
-      {/* FOOTER */}
+    {/* FOOTER */}
 
       <View style={styles.footerBar}>
+
+        {/* JUGADORES */}
+
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => {
+            setOrigen('JUGADORES')
+            setModalVisible(true)
+          }}
+        >
+          <Ionicons
+            name="person"
+            size={30}
+            color={COLORS.white}
+          />
+          <Text style={styles.footerLabel}>
+            Jugadores
+          </Text>
+        </TouchableOpacity>
 
         {/* INICIO */}
 
         <TouchableOpacity
           style={styles.footerItem}
-          onPress={() =>
-            obtenerPartidos(true)
-          }
+          onPress={() => obtenerPartidos(true)}
         >
-
           <Ionicons
             name="home"
             size={30}
             color={COLORS.white}
           />
-
           <Text style={styles.footerLabel}>
             Inicio
           </Text>
-
         </TouchableOpacity>
 
         {/* GRUPOS */}
@@ -459,22 +574,18 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.footerItem}
           onPress={() => {
-
+            setOrigen('GRUPOS')
             setModalVisible(true)
-
           }}
         >
-
           <Ionicons
             name="people"
             size={30}
             color={COLORS.white}
           />
-
           <Text style={styles.footerLabel}>
             Grupos
           </Text>
-
         </TouchableOpacity>
 
       </View>
@@ -510,10 +621,13 @@ export default function HomeScreen() {
                 if (clave === '0') {
 
                   setModalVisible(false)
-
                   setClave('')
 
-                  router.push('/asignar-grupo' as any)
+                  if (origen === 'JUGADORES') {
+                    router.push('/asignar-jugador' as any)
+                  } else {
+                    router.push('/asignar-grupo' as any)
+                  }
 
                 } else {
 
@@ -535,7 +649,6 @@ export default function HomeScreen() {
               onPress={() => {
 
                 setModalVisible(false)
-
                 setClave('')
               }}
             >
@@ -557,7 +670,7 @@ export default function HomeScreen() {
 }
 
 /* =========================
-   STYLES
+    STYLES
 ========================= */
 
 const styles = StyleSheet.create({
@@ -593,10 +706,73 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
 
-  title: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: COLORS.primary
+  eventosContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 10
+  },
+
+  eventoButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center'
+  },
+
+  eventoButtonActivo: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary
+  },
+
+  eventoButtonText: {
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontSize: 14
+  },
+
+  eventoButtonTextActivo: {
+    color: COLORS.white
+  },
+
+  /* CATEGORÍAS */
+
+  categoriasContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    gap: 10
+  },
+
+  categoriaButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center'
+  },
+
+  categoriaButtonActiva: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary
+  },
+
+  categoriaButtonText: {
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontSize: 13
+  },
+
+  categoriaButtonTextActivo: {
+    color: COLORS.white
   },
 
   newButton: {
